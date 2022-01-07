@@ -4,10 +4,6 @@ import (
 	"flag"
 )
 
-func stats(email string) {
-	print("stats")
-}
-
 func main() {
 	var folder string
 	var email string
@@ -20,8 +16,4 @@ func main() {
 		return
 	}
 	stats(email)
-}
-
-func scan(folder string) {
-	panic("deez nuts")
 }
