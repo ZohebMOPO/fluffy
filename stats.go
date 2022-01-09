@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"sort"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 const outOfRange = 99999
 const daysInLastSixMonths = 183
+const weeksInLastSixMonths = 26
 
 type column []int
 
@@ -93,6 +95,71 @@ func buildCols(keys []int, commits map[int]int) map[int]column {
 
 	return cols
 }
+func printMonths() {
+	week := getBeginningOfDay(time.Now()).Add(-(daysInLastSixMonths * time.Hour * 24))
+	month := week.Month()
+	fmt.Print("         ")
+	for {
+		if week.Month() != month {
+			fmt.Printf("%s ", week.Month().String()[:3])
+			month = week.Month()
+		} else {
+			fmt.Print("      ")
+		}
+
+		week := week.Add(7 * time.Hour * 24)
+		if week.After(time.Now()) {
+			break
+		}
+	}
+
+	fmt.Printf("\n")
+}
+
+func printDayCol(day int) {
+	out := "     "
+	switch day {
+	case 1:
+		out = " Mon "
+	case 3:
+		out = " Wed "
+	case 5:
+		out = " Fri "
+	}
+
+	fmt.Print(out)
+}
+
+func printCell(val int, today bool) {
+	escape := "\033[0;37;30m"
+	switch {
+	case val > 0 && val < 5:
+		escape = "\033[1;30;47m"
+	case val >= 5 && val < 10:
+		escape = "\033[1;30;43m"
+	case val >= 10:
+		escape = "\033[1;30;42m"
+	}
+
+	if today {
+		escape = "\033[1;37;45m"
+	}
+
+	if val == 0 {
+		fmt.Printf(escape + "  - " + "\033[0m")
+		return
+	}
+
+	str := "%d"
+	switch {
+	case val >= 10:
+		str = " %d "
+	case val >= 100:
+		str = " %d "
+	}
+
+	fmt.Print(escape+str+"\033[0m", val)
+}
 
 func printCells(cols map[int]column) {
 	printMonths()
@@ -112,7 +179,7 @@ func printCells(cols map[int]column) {
 					}
 				}
 			}
-			printCells(0, false)
+			printCell(0, false)
 		}
 		fmt.Print("\n")
 	}
@@ -121,17 +188,17 @@ func printCells(cols map[int]column) {
 func fillCommits(email string, path string, commits map[int]int) map[int]int {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	ref, err := repo.Head()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	iterator, err := repo.Log(&git.LogOptions{From: ref.Hash()})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	offset := calcOffset()
@@ -150,14 +217,14 @@ func fillCommits(email string, path string, commits map[int]int) map[int]int {
 	})
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	return commits
 }
 func processRepositories(email string) map[int]int {
 	filePath := getDotfilePath()
-	repos := parseFileLinesToSlice()
+	repos := parseFileLinesToSlice(filePath)
 	daysInMap := daysInLastSixMonths
 
 	commits := make(map[int]int, daysInMap)
